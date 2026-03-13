@@ -1,10 +1,26 @@
 # PyLazy
 
+<!-- Badges -->
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](#)
+[![Status](https://img.shields.io/badge/Status-Experimental-orange)](#)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+<!--
+Uncomment these once they exist:
+
+[![PyPI](https://img.shields.io/pypi/v/pylazy.svg)](https://pypi.org/project/pylazy/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pylazy.svg)](https://pypi.org/project/pylazy/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/pylazy.svg)](https://pypi.org/project/pylazy/)
+[![CI](https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml/badge.svg)](https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/<OWNER>/<REPO>/branch/main/graph/badge.svg)](https://codecov.io/gh/<OWNER>/<REPO>)
+-->
+
 PyLazy is a Python framework for **lazy-evaluated, LLM-generated functions**.
 
 Instead of writing a function body yourself, you describe the behavior in a string and let an LLM generate the implementation. PyLazy returns a normal Python callable, and can **cache** the generated code so future runs are repeatable and fast.
 
-> Status: early concept / WIP. APIs below are a proposed direction and may change.
+> Status: **early concept / WIP**. APIs below are a proposed direction and may change.
 
 ---
 
@@ -21,7 +37,7 @@ Sometimes you know *what* you want a function to do, but you don’t want to han
 
 ## Core Idea
 
-### A) Create a function from a prompt (primary API)
+### Create a function from a prompt (primary API)
 
 ```python
 from pylazy import connect, createFunction
