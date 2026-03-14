@@ -1,0 +1,78 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pylazy"
+version = "0.1.0"
+description = "Prompt-defined Python functions with lazy or eager LLM-backed generation."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+  { name = "PyLazy Contributors" },
+]
+keywords = [
+  "ai",
+  "codegen",
+  "gemini",
+  "llm",
+  "ollama",
+  "openai",
+  "python",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/AaronCreor/PyLazy"
+Repository = "https://github.com/AaronCreor/PyLazy"
+Issues = "https://github.com/AaronCreor/PyLazy/issues"
+Changelog = "https://github.com/AaronCreor/PyLazy/releases"
+
+[project.optional-dependencies]
+dev = [
+  "black>=25.0.0",
+  "build>=1.2.0",
+  "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
+  "twine>=5.0.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pylazy"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/README.md",
+  "/LICENSE",
+  "/example.py",
+  "/.github/workflows",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["pylazy"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
