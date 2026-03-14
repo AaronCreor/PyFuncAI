@@ -1,32 +1,32 @@
-name: Release
+name: Prerelease
 
 on:
   push:
     tags:
-      - "v*"
+      - "v*rc*"
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing Git tag to release, for example v0.1.0"
+        description: "Existing prerelease tag to publish, for example v0.2.0rc1"
         required: true
         type: string
 
 concurrency:
-  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+  group: prerelease-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  verify-main:
-    name: Verify main branch release
+  verify-preview:
+    name: Verify preview branch prerelease
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.resolve-tag.outputs.tag }}
 
     steps:
-      - name: Resolve release tag
+      - name: Resolve prerelease tag
         id: resolve-tag
         shell: bash
         run: |
@@ -41,7 +41,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Fetch release tag
+      - name: Fetch prerelease tag
         shell: bash
         run: |
           git fetch origin "refs/tags/${{ steps.resolve-tag.outputs.tag }}:refs/tags/${{ steps.resolve-tag.outputs.tag }}" --force
@@ -49,23 +49,23 @@ jobs:
       - name: Check out tagged source for validation
         run: git checkout "${{ steps.resolve-tag.outputs.tag }}"
 
-      - name: Verify tag points to a commit on main
+      - name: Verify tag points to a commit on preview
         shell: bash
         run: |
-          if [[ ! "${{ steps.resolve-tag.outputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Stable releases require tags like v1.2.3."
+          if [[ ! "${{ steps.resolve-tag.outputs.tag }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+rc[0-9]+$ ]]; then
+            echo "Preview releases require tags like v1.2.3rc1."
             exit 1
           fi
 
-          git fetch origin main --depth=1
+          git fetch origin preview --depth=1
           target_sha="$(git rev-list -n 1 "${{ steps.resolve-tag.outputs.tag }}")"
           if [[ -z "${target_sha}" ]]; then
             echo "Tag ${{ steps.resolve-tag.outputs.tag }} does not exist."
             exit 1
           fi
 
-          if ! git merge-base --is-ancestor "${target_sha}" "origin/main"; then
-            echo "Release tag must point to a commit reachable from origin/main."
+          if ! git merge-base --is-ancestor "${target_sha}" "origin/preview"; then
+            echo "Prerelease tag must point to a commit reachable from origin/preview."
             exit 1
           fi
 
@@ -88,16 +88,16 @@ jobs:
           fi
 
   build:
-    name: Build release packages
+    name: Build prerelease packages
     runs-on: ubuntu-latest
     needs:
-      - verify-main
+      - verify-preview
 
     steps:
       - name: Check out tagged source
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify-main.outputs.tag }}
+          ref: ${{ needs.verify-preview.outputs.tag }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -115,56 +115,32 @@ jobs:
       - name: Check distribution metadata
         run: python -m twine check dist/*
 
-      - name: Upload release artifacts
+      - name: Upload prerelease artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-dist
+          name: prerelease-dist
           path: dist/*
 
-  github-release:
-    name: Publish GitHub release
+  github-prerelease:
+    name: Publish GitHub prerelease
     runs-on: ubuntu-latest
     needs:
-      - verify-main
+      - verify-preview
       - build
     permissions:
       contents: write
 
     steps:
-      - name: Download release artifacts
+      - name: Download prerelease artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-dist
+          name: prerelease-dist
           path: dist
 
-      - name: Create GitHub release
+      - name: Create GitHub prerelease
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.verify-main.outputs.tag }}
+          tag_name: ${{ needs.verify-preview.outputs.tag }}
           files: dist/*
           generate_release_notes: true
-
-  publish-pypi:
-    name: Publish to PyPI
-    runs-on: ubuntu-latest
-    needs:
-      - verify-main
-      - build
-    permissions:
-      id-token: write
-      contents: read
-    environment:
-      name: pypi
-      url: https://pypi.org/project/pyfuncai/
-
-    steps:
-      - name: Download release artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: release-dist
-          path: dist
-
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: dist/
+          prerelease: true

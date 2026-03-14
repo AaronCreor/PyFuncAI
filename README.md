@@ -15,11 +15,11 @@ It is built as a normal PyPI-style package, exposes a small public API, supports
 
 The repository is set up around three long-lived branches:
 
-- `main`: production and release branch, including PyPI deployment
-- `preview`: pre-release validation branch
+- `main`: production and stable release branch, including PyPI deployment
+- `preview`: prerelease branch for release candidates and GitHub prereleases
 - `dev`: active development branch
 
-The GitHub Actions workflows are wired to run CI on all three branches, while PyPI publishing is restricted to version tags that point to commits on `main`.
+The GitHub Actions workflows are wired to run CI on all three branches. Stable PyPI publishing is restricted to version tags that point to commits on `main`, while preview tags publish GitHub prereleases from `preview`.
 
 ## What It Does
 
@@ -65,7 +65,8 @@ python example.py
 GitHub Actions workflows live in `.github/workflows/`:
 
 - `ci.yml`: formatting, tests, coverage, and package builds on `main`, `preview`, `dev`, and pull requests
-- `release.yml`: verifies the tag commit is on `main`, builds distributions, creates a GitHub release, and publishes to PyPI
+- `release.yml`: stable releases only, for tags like `v1.2.3` on `main`, with GitHub Release + PyPI publish
+- `prerelease.yml`: preview releases only, for tags like `v1.2.3rc1` on `preview`, with GitHub prerelease artifacts only
 
 The CI workflow still uploads `coverage.xml`, but the README no longer exposes a Codecov badge.
 
@@ -234,6 +235,7 @@ Optional environment variables for the live test:
 ```text
 .github/workflows/
   ci.yml
+  prerelease.yml
   release.yml
 src/pyfuncai/
   __init__.py
@@ -270,7 +272,7 @@ Current state of the repository:
 - disk cache
 - validation and restricted execution
 - unit tests and optional live Ollama test
-- CI, release automation, and PyPI publishing workflow
+- CI, stable release automation, preview prereleases, and PyPI publishing workflow
 
 ## Publishing To PyPI
 
@@ -290,7 +292,9 @@ In the GitHub repository:
 Recommended:
 
 - protect `main`
-- create tags like `v0.1.0` only from `main`
+- protect `preview`
+- create stable tags like `v0.1.3` only from `main`
+- create preview tags like `v0.2.0rc1` only from `preview`
 
 ### 2. Configure PyPI Trusted Publishing
 
@@ -315,9 +319,9 @@ From a clean `main` branch state:
 ```bash
 git checkout main
 git pull
-git tag v0.1.0
+git tag v0.1.3
 git push origin main
-git push origin v0.1.0
+git push origin v0.1.3
 ```
 
 That tag triggers `release.yml`, which will:
@@ -327,7 +331,32 @@ That tag triggers `release.yml`, which will:
 - create a GitHub Release with the built artifacts
 - publish the package to PyPI through trusted publishing
 
-### 4. Create The Extra Branches On GitHub
+### 4. Publish A Preview Prerelease
+
+From the `preview` branch:
+
+1. Set `version` in `pyproject.toml` to a prerelease value such as `0.2.0rc1`.
+2. Commit and push to `preview`.
+3. Create and push a matching prerelease tag:
+
+```bash
+git checkout preview
+git pull
+git tag v0.2.0rc1
+git push origin preview
+git push origin v0.2.0rc1
+```
+
+That tag triggers `prerelease.yml`, which will:
+
+- verify the tag commit is reachable from `preview`
+- verify the tag matches `pyproject.toml`
+- build the wheel and sdist
+- create a GitHub prerelease
+
+It does not publish preview builds to PyPI.
+
+### 5. Create The Extra Branches On GitHub
 
 Local branches now exist, but GitHub will not see them until you push them:
 
