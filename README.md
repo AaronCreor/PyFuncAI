@@ -3,8 +3,8 @@
 [![CI](https://github.com/AaronCreor/PyFuncAI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/AaronCreor/PyFuncAI/actions/workflows/ci.yml)
 [![Release](https://github.com/AaronCreor/PyFuncAI/actions/workflows/release.yml/badge.svg)](https://github.com/AaronCreor/PyFuncAI/actions/workflows/release.yml)
 [![codecov](https://codecov.io/gh/AaronCreor/PyFuncAI/branch/main/graph/badge.svg)](https://codecov.io/gh/AaronCreor/PyFuncAI)
-[![PyPI](https://img.shields.io/pypi/v/pyfuncai.svg)](https://pypi.org/project/pyfuncai/)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyfuncai.svg)](https://pypi.org/project/pyfuncai/)
+[![PyPI](https://img.shields.io/pypi/v/PyFuncAI.svg)](https://pypi.org/project/PyFuncAI/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/PyFuncAI.svg)](https://pypi.org/project/PyFuncAI/)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
