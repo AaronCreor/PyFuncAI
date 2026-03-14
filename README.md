@@ -7,77 +7,34 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-PyFuncAI is a Python library for defining functions with prompts and letting an LLM generate the implementation on demand.
+PyFuncAI is a Python library for defining functions with prompts and generating their implementations with an LLM at runtime.
 
-It is built as a normal PyPI-style package, exposes a small public API, supports local Ollama models and remote OpenAI/Gemini providers, and can cache generated source on disk for reuse across runs.
+The library is built around a small API:
 
-## Branch Strategy
+- connect to a model provider
+- describe a function in natural language
+- request lazy or eager generation
+- optionally cache generated source for reuse across runs
 
-The repository is set up around three long-lived branches:
-
-- `main`: production and stable release branch, including PyPI deployment
-- `preview`: prerelease branch for release candidates and GitHub prereleases
-- `dev`: active development branch
-
-The GitHub Actions workflows are wired to run CI on all three branches. Stable PyPI publishing is restricted to version tags that point to commits on `main`, while preview tags publish GitHub prereleases from `preview`.
-
-## What It Does
-
-PyFuncAI turns a prompt plus a Python signature into a callable object:
-
-- `mode="lazy"` delays generation until first use.
-- `mode="eager"` builds immediately.
-- `cache=True` stores generated source on disk.
-- `.build()` forces materialization ahead of time.
-- `.source` exposes the generated Python source once available.
-
-The generated code is validated before execution:
-
-- exactly one top-level function must be returned
-- the generated signature must exactly match the requested signature
-- only approved standard-library imports are allowed
-- obvious dangerous builtins such as `open`, `eval`, and `exec` are blocked
-
-This is still experimental. Validation is intentionally conservative, but LLM-generated code should still be treated as untrusted.
+PyFuncAI currently supports local Ollama models and remote OpenAI and Gemini providers.
 
 ## Installation
 
-Once published:
+Install from PyPI:
 
 ```bash
 pip install pyfuncai
 ```
 
-For local development from this repo:
+For local development:
 
 ```bash
 pip install -e .[dev]
 ```
 
-To run the minimal example directly from the repository checkout:
-
-```bash
-python example.py
-```
-
-## Automation
-
-GitHub Actions workflows live in `.github/workflows/`:
-
-- `ci.yml`: formatting, tests, coverage, and package builds on `main`, `preview`, `dev`, and pull requests
-- `release.yml`: stable releases only, for tags like `v1.2.3` on `main`, with GitHub Release + PyPI publish
-- `prerelease.yml`: preview releases only, for tags like `v1.2.3rc1` on `preview`, with GitHub prerelease artifacts only
-
-The CI workflow still uploads `coverage.xml`, but the README no longer exposes a Codecov badge.
-
 ## Quick Start
 
 ### Ollama
-
-This was smoke-tested locally on March 13, 2026 with:
-
-- Ollama at `http://localhost:11434`
-- model `qwen3.5:latest`
 
 ```python
 from pyfuncai import connect, create_function
@@ -98,7 +55,6 @@ greet = create_function(
 )
 
 print(greet("Alice"))
-print(greet.source)
 ```
 
 ### OpenAI
@@ -119,8 +75,6 @@ slugify = create_function(
 )
 ```
 
-`OPENAI_API_KEY` is also supported.
-
 ### Gemini
 
 ```python
@@ -139,13 +93,11 @@ summarize = create_function(
 )
 ```
 
-`GEMINI_API_KEY` is also supported.
-
-## Public API
+## Core Concepts
 
 ### `connect(provider, **config)`
 
-Registers the default provider used by later `create_function()` calls.
+Registers the default provider used by subsequent `create_function()` calls.
 
 Supported providers:
 
@@ -167,13 +119,15 @@ Provider-specific keys:
 
 ### `create_function(...)`
 
-Main arguments:
+Creates a prompt-defined callable.
+
+Common arguments:
 
 - `prompt`
 - `signature`
-- `cache=True`
-- `mode="lazy"` or `mode="eager"`
 - `function_name`
+- `mode="lazy"` or `mode="eager"`
+- `cache=True`
 - `provider`
 - `cache_dir`
 - `system_prompt`
@@ -181,7 +135,7 @@ Main arguments:
 - `max_output_tokens`
 - `allow_modules`
 
-It returns a `GeneratedFunction`, which is callable and also exposes:
+The return value is a `GeneratedFunction`. It behaves like a normal callable and also exposes:
 
 - `.build(force=False)`
 - `.source`
@@ -190,28 +144,56 @@ It returns a `GeneratedFunction`, which is callable and also exposes:
 
 `createFunction(...)` is available as a compatibility alias.
 
-## Cache Behavior
+## Generation Modes
 
-Cached source is keyed by:
+- `lazy`: generation happens on first invocation
+- `eager`: generation happens during `create_function()`
+
+## Caching
+
+Generated source can be cached on disk and reused across runs. Cache keys include:
 
 - prompt
-- requested signature
+- signature
 - function name
 - provider identity
 - mode
-- allowed module list
+- allowed modules
 
-By default PyFuncAI uses an OS-appropriate user cache directory. You can override that globally in `connect(..., cache_dir=...)` or per function with `create_function(..., cache_dir=...)`.
+The default cache location is OS-specific. You can override it globally with `connect(..., cache_dir=...)` or per function with `create_function(..., cache_dir=...)`.
 
-## Live Testing
+## Safety
 
-The unit test suite is offline and deterministic:
+PyFuncAI validates generated code before execution. The current implementation includes:
+
+- AST validation
+- exact signature matching
+- restricted imports
+- restricted builtins at execution time
+
+This is still a code-generation library, not a hardened sandbox. Generated code should be treated as untrusted.
+
+## Development
+
+The repository uses three long-lived branches:
+
+- `main`: stable development and PyPI releases
+- `preview`: prerelease validation and release-candidate testing
+- `dev`: active integration branch
+
+Automation lives under `.github/workflows/`:
+
+- `ci.yml`: formatting, tests, and package build checks on `main`, `preview`, `dev`, and pull requests
+- `release.yml`: stable releases from `main` tags such as `v0.1.3`
+- `prerelease.yml`: GitHub prereleases from `preview` tags such as `v0.1.4rc1`
+
+Run the test suite locally:
 
 ```bash
 pytest
 ```
 
-An optional live Ollama integration test is included but skipped by default:
+Run the optional live Ollama test:
 
 ```bash
 PYFUNCAI_RUN_OLLAMA_TESTS=1 pytest tests/test_ollama_live.py
@@ -224,97 +206,17 @@ $env:PYFUNCAI_RUN_OLLAMA_TESTS = "1"
 pytest tests/test_ollama_live.py
 ```
 
-Optional environment variables for the live test:
+## Releasing
 
-- `PYFUNCAI_OLLAMA_MODEL`
-- `PYFUNCAI_OLLAMA_BASE_URL`
-- `PYFUNCAI_OLLAMA_TIMEOUT`
+Stable releases are published to PyPI from `main`.
 
-## Project Layout
-
-```text
-.github/workflows/
-  ci.yml
-  prerelease.yml
-  release.yml
-src/pyfuncai/
-  __init__.py
-  cache.py
-  compiler.py
-  core.py
-  exceptions.py
-  prompts.py
-  providers.py
-  validation.py
-tests/
-example.py
-```
-
-The package uses a `src/` layout and `pyproject.toml`, which keeps it ready for normal wheel and sdist publishing.
-
-## Safety Notes
-
-PyFuncAI validates generated code, but it does not provide hard sandboxing. The current implementation focuses on:
-
-- AST checks
-- restricted imports
-- restricted builtins during execution
-
-That helps, but it is not the same thing as secure isolation. Do not use generated code against secrets, production systems, or privileged environments without stronger containment.
-
-## Status
-
-Current state of the repository:
-
-- distributable package layout via `pyproject.toml`
-- Ollama/OpenAI/Gemini provider adapters
-- lazy and eager generation
-- disk cache
-- validation and restricted execution
-- unit tests and optional live Ollama test
-- CI, stable release automation, preview prereleases, and PyPI publishing workflow
-
-## Publishing To PyPI
-
-PyFuncAI is configured for PyPI trusted publishing with GitHub Actions. The release workflow file is:
-
-- `.github/workflows/release.yml`
-
-### 1. Configure GitHub
-
-In the GitHub repository:
-
-1. Create or confirm the long-lived branches: `main`, `preview`, and `dev`.
-2. In `Settings -> Environments`, create an environment named `pypi`.
-3. Optionally add protection rules so only approved maintainers can publish.
-4. Push the workflow files to GitHub.
-
-Recommended:
-
-- protect `main`
-- protect `preview`
-- create stable tags like `v0.1.3` only from `main`
-- create preview tags like `v0.2.0rc1` only from `preview`
-
-### 2. Configure PyPI Trusted Publishing
-
-In PyPI, add a new trusted publisher using the GitHub tab with these values:
-
-- PyPI Project Name: `pyfuncai`
-- Owner: `AaronCreor`
-- Repository name: `PyFuncAI`
-- Workflow name: `release.yml`
-- Environment name: `pypi`
-
-This matches the current repository and workflow layout.
-
-### 3. Publish A Release
-
-From a clean `main` branch state:
+Typical stable release flow:
 
 1. Update `version` in `pyproject.toml`.
 2. Commit and push to `main`.
-3. Create and push a version tag:
+3. Create and push a matching tag.
+
+Example:
 
 ```bash
 git checkout main
@@ -324,52 +226,33 @@ git push origin main
 git push origin v0.1.3
 ```
 
-That tag triggers `release.yml`, which will:
+Preview releases are created from `preview` and published as GitHub prereleases only.
 
-- verify the tag commit is reachable from `main`
-- build the wheel and sdist
-- create a GitHub Release with the built artifacts
-- publish the package to PyPI through trusted publishing
-
-### 4. Publish A Preview Prerelease
-
-From the `preview` branch:
-
-1. Set `version` in `pyproject.toml` to a prerelease value such as `0.2.0rc1`.
-2. Commit and push to `preview`.
-3. Create and push a matching prerelease tag:
+Example:
 
 ```bash
 git checkout preview
 git pull
-git tag v0.2.0rc1
+git tag v0.1.4rc1
 git push origin preview
-git push origin v0.2.0rc1
+git push origin v0.1.4rc1
 ```
 
-That tag triggers `prerelease.yml`, which will:
+## Contributing
 
-- verify the tag commit is reachable from `preview`
-- verify the tag matches `pyproject.toml`
-- build the wheel and sdist
-- create a GitHub prerelease
+Contributions are welcome. A good contribution usually includes:
 
-It does not publish preview builds to PyPI.
+- a clear problem statement or use case
+- tests for behavior changes
+- documentation updates when the public API changes
 
-### 5. Create The Extra Branches On GitHub
-
-Local branches now exist, but GitHub will not see them until you push them:
+Before opening a pull request:
 
 ```bash
-git push -u origin preview
-git push -u origin dev
+python -m black src tests example.py
+python -m pytest
+python -m build
 ```
-
-### References
-
-- PyPI trusted publishing docs: https://docs.pypi.org/trusted-publishers/
-- PyPA publishing guide: https://packaging.python.org/en/latest/tutorials/packaging-projects/
-- GitHub Actions badges: https://docs.github.com/actions/monitoring-and-troubleshooting-workflows/monitoring-workflows/adding-a-workflow-status-badge
 
 ## License
 
