@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `pyfuncai --version` prints the installed package version (PR #7, submitted by
+  [ShahadatTest](https://github.com/ShahadatTest)).
+- `pyfuncai cache list --json` outputs an ordered array of cache keys, function
+  names, modes, and creation timestamps. Empty caches produce `[]`; prompts,
+  generated source, and provider configuration are omitted (PR #6,
+  [29rdx](https://github.com/29rdx)).
+
 ## 0.1.9 - 2026-10-31
 
 - Ship all audited runtime fixes and documentation prepared for 0.1.8.

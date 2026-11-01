@@ -208,6 +208,7 @@ are rejected. Cache commands skip entries with unsafe names or external links.
 ## Command line
 
 ```bash
+pyfuncai --version
 pyfuncai build path/to/script.py
 pyfuncai build --force path/to/script.py
 pyfuncai cache path
@@ -216,6 +217,21 @@ pyfuncai cache remove FULL_CACHE_KEY
 pyfuncai cache clear
 pyfuncai cache --cache-dir .pyfuncai-cache list
 ```
+
+`pyfuncai --version` prints `pyfuncai <version>` using the installed package version
+and exits successfully without configuring a provider.
+
+For machine-readable cache metadata, use:
+
+```bash
+pyfuncai cache list --json
+pyfuncai cache --cache-dir .pyfuncai-cache list --json
+```
+
+The JSON array contains exactly `cache_key`, `function_name`, `mode`, and
+`created_at` for each entry, in the same newest-first order as the plain listing.
+An empty cache prints `[]`. Prompts, generated source, and provider configuration
+are omitted. Plain listings retain their existing output.
 
 `pyfuncai build` **executes the entire target script**, including its `__main__`
 block and other side effects, then builds the functions it created. Use a dedicated
@@ -345,6 +361,14 @@ continue to authorize `AaronCreor/PyFuncAI`, workflow `release.yml`.
 `prerelease.yml` applies the same checks to `preview` tags such as `v0.1.10rc1`, then
 creates a GitHub prerelease. Preview artifacts are not published to PyPI. CI and both
 release workflows share `.github/workflows/checks.yml`.
+
+## Contributors
+
+Thanks to [29rdx](https://github.com/29rdx) for
+[JSON cache listings](https://github.com/AaronCreor/PyFuncAI/pull/6) and
+[ShahadatTest](https://github.com/ShahadatTest) for submitting
+[the version command](https://github.com/AaronCreor/PyFuncAI/pull/7).
+See the [full contributor history](https://github.com/AaronCreor/PyFuncAI/graphs/contributors).
 
 ## License
 

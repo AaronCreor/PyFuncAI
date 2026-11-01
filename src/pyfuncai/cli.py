@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import json
 from collections.abc import Sequence
 from pathlib import Path
 import runpy
 import sys
 
+from pyfuncai import __version__
 from pyfuncai.cache import DiskCache
 from pyfuncai.core import _collect_functions
 from pyfuncai.exceptions import PyFuncAIError
@@ -31,6 +33,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="pyfuncai",
         description="Build prompt-defined functions and inspect the local cache.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"pyfuncai {__version__}",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -69,6 +76,11 @@ def _build_parser() -> argparse.ArgumentParser:
     cache_list_parser = cache_subparsers.add_parser(
         "list",
         help="List cache entries stored on disk.",
+    )
+    cache_list_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Print cache metadata as a JSON array instead of plain text.",
     )
     cache_list_parser.set_defaults(handler=_handle_cache_list)
 
@@ -130,10 +142,25 @@ def _handle_cache_path(args: argparse.Namespace) -> int:
 
 
 def _handle_cache_list(args: argparse.Namespace) -> int:
-    """List cache entries in a human-readable format."""
+    """List cache metadata as plain text or JSON."""
 
     cache = DiskCache(cache_dir=args.cache_dir)
     entries = cache.entries()
+    if args.json:
+        print(
+            json.dumps(
+                [
+                    {
+                        "cache_key": entry.cache_key,
+                        "function_name": entry.function_name,
+                        "mode": entry.mode,
+                        "created_at": entry.created_at,
+                    }
+                    for entry in entries
+                ]
+            )
+        )
+        return 0
     if not entries:
         print("Cache is empty.")
         return 0

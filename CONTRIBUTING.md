@@ -33,6 +33,14 @@ notes. Wait for CI, inspect the diff, and obtain maintainer review when another
 maintainer is available. Do not bypass configured branch or environment protections.
 A sole maintainer can merge a fully checked maintenance change if repository policy permits.
 
+To receive GitHub contributor credit, author commits with an email linked to your
+GitHub account (your GitHub-provided noreply address also works). Keep your own
+authorship when using coding assistants. Maintainers should preserve contributor
+commits when promoting `dev` through `preview` to the default branch, `main`.
+GitHub's contributors graph uses commits on the default branch and may take time
+to refresh. README acknowledgments can also credit PR submitters whose commits
+were authored under another account.
+
 For a release, update the package version and documentation together. After merging,
 create an annotated version tag from the target branch. Follow the release procedure
 in README.md and verify both GitHub and PyPI. Never overwrite published versions or tags.
