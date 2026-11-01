@@ -7,6 +7,9 @@ import json
 import re
 
 from pyfuncai.exceptions import GenerationError
+from pyfuncai.compiler import SAFE_BUILTIN_NAMES
+
+GENERATION_TEMPLATE_VERSION = 2
 
 
 def build_generation_prompt(
@@ -18,7 +21,8 @@ def build_generation_prompt(
 ) -> str:
     """Construct the user-facing generation prompt sent to the model provider."""
 
-    allowed_module_text = ", ".join(allowed_modules)
+    allowed_module_text = ", ".join(allowed_modules) or "none (do not import anything)"
+    builtin_text = ", ".join(sorted(SAFE_BUILTIN_NAMES))
     return f"""
 Write Python source code for exactly one top-level function.
 
@@ -29,6 +33,8 @@ Requirements:
 - Include a concise function docstring that explains behavior, arguments, and return value.
 - Use only Python's standard library.
 - If you need imports, they must come only from: {allowed_module_text}.
+- The only available builtins are: {builtin_text}.
+- Do not use decorators or executable default expressions. Keep annotations as types.
 - Do not read or write files, access the network, execute shell commands, use eval/exec,
   or import unsafe modules.
 - Keep the implementation deterministic and focused on correctness.

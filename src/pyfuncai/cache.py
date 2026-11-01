@@ -8,7 +8,11 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
+import tempfile
 from typing import Any
+
+from pyfuncai.exceptions import ConfigurationError
 
 CACHE_SCHEMA_VERSION = 1
 
@@ -63,21 +67,54 @@ class DiskCache:
     def path_for(self, cache_key: str) -> Path:
         """Return the JSON file path for a cache key."""
 
-        return self.cache_dir / f"{cache_key}.json"
+        if not isinstance(cache_key, str) or not re.fullmatch(
+            r"[A-Za-z0-9_-]{1,128}", cache_key
+        ):
+            raise ConfigurationError(
+                "Invalid cache key: use letters, digits, '_' or '-'."
+            )
+        path = self.cache_dir / f"{cache_key}.json"
+        if path.resolve().parent != self.cache_dir.resolve():
+            raise ConfigurationError(
+                "Cache entries must stay inside the cache directory."
+            )
+        return path
 
     def get(self, cache_key: str) -> CacheEntry | None:
         """Load a cache entry if it exists and matches the current schema version."""
 
-        path = self.path_for(cache_key)
-        if not path.exists():
-            return None
+        return self._read_entry(self.path_for(cache_key), cache_key)
 
-        payload = json.loads(path.read_text(encoding="utf-8"))
-        if payload.get("schema_version") != CACHE_SCHEMA_VERSION:
-            return None
+    def _read_entry(self, path: Path, cache_key: str) -> CacheEntry | None:
+        """Treat truncated, incompatible, or malformed entries as cache misses."""
 
-        payload.pop("schema_version", None)
-        return CacheEntry(**payload)
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict):
+                return None
+            if payload.pop("schema_version", None) != CACHE_SCHEMA_VERSION:
+                return None
+            entry = CacheEntry(**payload)
+            strings = (
+                entry.cache_key,
+                entry.function_name,
+                entry.signature,
+                entry.source,
+                entry.created_at,
+                entry.prompt,
+                entry.mode,
+            )
+            if (
+                entry.cache_key != cache_key
+                or not all(isinstance(value, str) for value in strings)
+                or not isinstance(entry.provider, dict)
+                or not isinstance(entry.allow_modules, list)
+                or not all(isinstance(value, str) for value in entry.allow_modules)
+            ):
+                return None
+            return entry
+        except (OSError, UnicodeError, ValueError, TypeError):
+            return None
 
     def entries(self) -> list[CacheEntry]:
         """Return all cache entries currently stored on disk."""
@@ -85,15 +122,11 @@ class DiskCache:
         entries: list[CacheEntry] = []
         for path in sorted(self.cache_dir.glob("*.json")):
             try:
-                payload = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
+                entry = self.get(path.stem)
+            except ConfigurationError:
                 continue
-
-            if payload.get("schema_version") != CACHE_SCHEMA_VERSION:
-                continue
-
-            payload.pop("schema_version", None)
-            entries.append(CacheEntry(**payload))
+            if entry is not None:
+                entries.append(entry)
 
         entries.sort(key=lambda entry: entry.created_at, reverse=True)
         return entries
@@ -102,10 +135,10 @@ class DiskCache:
         """Delete a cache entry by key and report whether a file was removed."""
 
         path = self.path_for(cache_key)
-        if not path.exists():
+        try:
+            path.unlink()
+        except FileNotFoundError:
             return False
-
-        path.unlink()
         return True
 
     def clear(self) -> int:
@@ -113,8 +146,10 @@ class DiskCache:
 
         removed = 0
         for path in self.cache_dir.glob("*.json"):
-            path.unlink()
-            removed += 1
+            try:
+                removed += self.delete(path.stem)
+            except ConfigurationError:
+                continue
         return removed
 
     def set(
@@ -146,8 +181,23 @@ class DiskCache:
             "schema_version": CACHE_SCHEMA_VERSION,
             **asdict(entry),
         }
-        self.path_for(cache_key).write_text(
-            json.dumps(payload, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
+        target = self.path_for(cache_key)
+        temporary: Path | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.cache_dir,
+                prefix=".pyfuncai-",
+                suffix=".tmp",
+                delete=False,
+            ) as stream:
+                temporary = Path(stream.name)
+                json.dump(payload, stream, indent=2, sort_keys=True)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temporary, target)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
         return entry

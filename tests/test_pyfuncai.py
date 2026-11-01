@@ -15,6 +15,7 @@ from pyfuncai import (
     create_function,
 )
 from pyfuncai.cache import DiskCache
+from pyfuncai import __version__
 from pyfuncai.cli import main as cli_main
 from pyfuncai.core import GeneratedFunction
 from pyfuncai.providers import BaseProvider
@@ -332,3 +333,12 @@ def test_cli_cache_commands(tmp_path: Path, capsys: pytest.CaptureFixture[str]) 
     assert cli_main(["cache", "--cache-dir", str(tmp_path), "clear"]) == 0
     clear_output = capsys.readouterr()
     assert "Removed 0 cache entries." in clear_output.out
+
+
+def test_cli_version(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exited:
+        cli_main(["--version"])
+    assert exited.value.code == 0
+    captured = capsys.readouterr()
+    assert captured.out.startswith("pyfuncai ")
+    assert captured.out.strip() == f"pyfuncai {__version__}"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import builtins
+import __future__
 from collections.abc import Callable, Iterable
 from types import CodeType
 from typing import Any
@@ -10,6 +11,30 @@ from typing import Any
 from pyfuncai.exceptions import ValidationError
 
 SAFE_BUILTIN_NAMES = {
+    "ArithmeticError",
+    "AssertionError",
+    "IndexError",
+    "KeyError",
+    "LookupError",
+    "NotImplementedError",
+    "OverflowError",
+    "RuntimeError",
+    "StopIteration",
+    "TypeError",
+    "ValueError",
+    "ZeroDivisionError",
+    "bytes",
+    "bytearray",
+    "chr",
+    "divmod",
+    "frozenset",
+    "hex",
+    "iter",
+    "next",
+    "ord",
+    "pow",
+    "repr",
+    "slice",
     "abs",
     "all",
     "any",
@@ -77,13 +102,22 @@ def compile_function(
     """Compile validated source code and return the generated function object."""
 
     code: CodeType = compile(
-        source, filename=f"<pyfuncai:{function_name}>", mode="exec"
+        source,
+        filename=f"<pyfuncai:{function_name}>",
+        mode="exec",
+        flags=__future__.annotations.compiler_flag,
+        dont_inherit=True,
     )
     namespace: dict[str, Any] = {
         "__builtins__": _build_safe_builtins(allowed_modules),
         "__name__": "pyfuncai.generated",
     }
-    exec(code, namespace, namespace)
+    try:
+        exec(code, namespace, namespace)
+    except Exception as error:
+        raise ValidationError(
+            f"Generated code failed during compilation: {error}"
+        ) from error
 
     function = namespace.get(function_name)
     if not callable(function):

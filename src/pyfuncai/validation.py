@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 
 from pyfuncai.exceptions import ValidationError
+from pyfuncai.signatures import parse_signature
 
 DEFAULT_ALLOWED_MODULES = (
     "collections",
@@ -59,6 +60,10 @@ def validate_function_source(
         )
 
     function_node = function_nodes[0]
+    if function_node.decorator_list or getattr(function_node, "type_params", []):
+        raise ValidationError(
+            "Decorators and generic type parameters are not supported."
+        )
     if function_node.name != function_name:
         raise ValidationError(
             f"Generated function name '{function_node.name}' does not match '{function_name}'."
@@ -81,14 +86,7 @@ def validate_function_source(
 def _parse_expected_signature(function_name: str, signature: str) -> ast.FunctionDef:
     """Parse a requested signature into an AST function node for comparison."""
 
-    try:
-        expected_module = ast.parse(f"def {function_name}{signature}:\n    pass\n")
-    except SyntaxError as error:
-        raise ValidationError(
-            f"Invalid requested signature '{signature}': {error}"
-        ) from error
-
-    return expected_module.body[0]
+    return parse_signature(signature)
 
 
 def _validate_top_level_statements(
@@ -138,6 +136,8 @@ def _validate_ast_nodes(module: ast.AST, allowed_modules: tuple[str, ...]) -> No
     allowed_roots = {module_name.split(".")[0] for module_name in allowed_modules}
 
     for node in ast.walk(module):
+        if isinstance(node, ast.FunctionDef) and node.decorator_list:
+            raise ValidationError("Decorators are not supported in generated code.")
         if isinstance(node, ast.AsyncFunctionDef):
             raise ValidationError("Async functions are not currently supported.")
 
@@ -158,6 +158,8 @@ def _validate_ast_nodes(module: ast.AST, allowed_modules: tuple[str, ...]) -> No
                     raise ValidationError(f"Import '{alias.name}' is not allowed.")
 
         if isinstance(node, ast.ImportFrom):
+            if node.level != 0:
+                raise ValidationError("Relative imports are not allowed.")
             module_name = (node.module or "").split(".")[0]
             if module_name not in allowed_roots:
                 raise ValidationError(f"Import '{node.module}' is not allowed.")

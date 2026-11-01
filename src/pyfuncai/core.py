@@ -3,20 +3,36 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from contextlib import contextmanager
+from contextvars import ContextVar
 import inspect
+import keyword
+import math
 import re
+import threading
 from typing import Any
+from weakref import WeakValueDictionary
 
 from pyfuncai.cache import DiskCache, make_cache_key
 from pyfuncai.compiler import compile_function
 from pyfuncai.exceptions import ConfigurationError, GenerationError
-from pyfuncai.prompts import build_generation_prompt, extract_python_source
+from pyfuncai.prompts import (
+    GENERATION_TEMPLATE_VERSION,
+    build_generation_prompt,
+    extract_python_source,
+)
 from pyfuncai.providers import BaseProvider, create_provider
+from pyfuncai.signatures import signature_object
 from pyfuncai.validation import DEFAULT_ALLOWED_MODULES, validate_function_source
 
 _DEFAULT_PROVIDER: BaseProvider | None = None
 _DEFAULT_CACHE: DiskCache | None = None
-_REGISTERED_FUNCTIONS: list["GeneratedFunction"] = []
+_REGISTERED_FUNCTIONS: WeakValueDictionary[int, GeneratedFunction] = (
+    WeakValueDictionary()
+)
+_FUNCTION_COLLECTOR: ContextVar[list[GeneratedFunction] | None] = ContextVar(
+    "pyfuncai_function_collector", default=None
+)
 
 
 def connect(
@@ -68,6 +84,7 @@ class GeneratedFunction:
     )
     _built_function: Any = field(init=False, default=None, repr=False)
     _source: str | None = field(init=False, default=None, repr=False)
+    _build_lock: Any = field(init=False, default_factory=threading.RLock, repr=False)
     __signature__: inspect.Signature = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -77,7 +94,31 @@ class GeneratedFunction:
             raise ConfigurationError("mode must be either 'lazy' or 'eager'.")
 
         self.function_name = _normalize_function_name(self.function_name)
-        self.allow_modules = tuple(sorted({module for module in self.allow_modules}))
+        if not isinstance(self.prompt, str) or not self.prompt.strip():
+            raise ConfigurationError("prompt must be a nonempty string.")
+        if any(
+            not isinstance(module, str)
+            or not module
+            or any(not part.isidentifier() for part in module.split("."))
+            for module in self.allow_modules
+        ):
+            raise ConfigurationError("allow_modules must contain module names.")
+        self.allow_modules = tuple(sorted(set(self.allow_modules)))
+        if self.temperature is not None and (
+            isinstance(self.temperature, bool)
+            or not isinstance(self.temperature, (int, float))
+            or not math.isfinite(self.temperature)
+            or self.temperature < 0
+        ):
+            raise ConfigurationError("temperature must be a finite nonnegative number.")
+        if self.system_prompt is not None and not isinstance(self.system_prompt, str):
+            raise ConfigurationError("system_prompt must be a string or None.")
+        if self.max_output_tokens is not None and (
+            isinstance(self.max_output_tokens, bool)
+            or not isinstance(self.max_output_tokens, int)
+            or self.max_output_tokens <= 0
+        ):
+            raise ConfigurationError("max_output_tokens must be a positive integer.")
         self.__name__ = self.function_name
         self.__qualname__ = self.function_name
         self.__doc__ = self.prompt
@@ -94,6 +135,10 @@ class GeneratedFunction:
             "provider": self.provider.cache_identity(),
             "mode": self.mode,
             "allow_modules": list(self.allow_modules),
+            "system_prompt": self.system_prompt,
+            "temperature": self.temperature,
+            "max_output_tokens": self.max_output_tokens,
+            "generation_template_version": GENERATION_TEMPLATE_VERSION,
         }
         return make_cache_key(payload)
 
@@ -123,35 +168,49 @@ class GeneratedFunction:
     def build(self, *, force: bool = False) -> Any:
         """Generate, validate, compile, and cache the underlying callable."""
 
+        with self._build_lock:
+            return self._build_locked(force=force)
+
+    def _build_locked(self, *, force: bool) -> Any:
+        """Publish a callable and its cache entry only after successful validation."""
+
         if self._built_function is not None and not force:
             return self._built_function
 
         source = None if force else self.source
+        generated = source is None
         if source is None:
             source = self._generate_source()
-            if self.cache_enabled:
-                self.cache_store.set(
-                    cache_key=self.cache_key,
-                    function_name=self.function_name,
-                    signature=self.signature,
-                    source=source,
-                    provider=self.provider.cache_identity(),
-                    prompt=self.prompt,
-                    mode=self.mode,
-                    allow_modules=list(self.allow_modules),
-                )
-
-        validate_function_source(
-            source,
-            function_name=self.function_name,
-            signature=self.signature,
-            allowed_modules=self.allow_modules,
-        )
-        self._built_function = compile_function(
-            source,
-            function_name=self.function_name,
-            allowed_modules=self.allow_modules,
-        )
+        try:
+            validate_function_source(
+                source,
+                function_name=self.function_name,
+                signature=self.signature,
+                allowed_modules=self.allow_modules,
+            )
+            function = compile_function(
+                source,
+                function_name=self.function_name,
+                allowed_modules=self.allow_modules,
+            )
+        except Exception:
+            if not generated:
+                self._source = None
+                if self.cache_enabled:
+                    self.cache_store.delete(self.cache_key)
+            raise
+        if generated and self.cache_enabled:
+            self.cache_store.set(
+                cache_key=self.cache_key,
+                function_name=self.function_name,
+                signature=self.signature,
+                source=source,
+                provider=self.provider.cache_identity(),
+                prompt=self.prompt,
+                mode=self.mode,
+                allow_modules=list(self.allow_modules),
+            )
+        self._built_function = function
         self._source = source
         return self._built_function
 
@@ -241,6 +300,9 @@ def create_function(
             "No provider configured. Call connect(...) first or pass provider=."
         )
 
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ConfigurationError("prompt must be a nonempty string.")
+
     cache_store = (
         DiskCache(cache_dir) if cache_dir is not None else _resolve_cache_store()
     )
@@ -255,7 +317,9 @@ def create_function(
         system_prompt=system_prompt,
         temperature=temperature,
         max_output_tokens=max_output_tokens,
-        allow_modules=tuple(allow_modules or DEFAULT_ALLOWED_MODULES),
+        allow_modules=tuple(
+            DEFAULT_ALLOWED_MODULES if allow_modules is None else allow_modules
+        ),
     )
     if mode == "eager":
         generated.build()
@@ -282,19 +346,34 @@ def _resolve_cache_store() -> DiskCache:
 def _register_generated_function(function: GeneratedFunction) -> None:
     """Track created functions so CLI tooling can materialize them later."""
 
-    _REGISTERED_FUNCTIONS.append(function)
+    _REGISTERED_FUNCTIONS[id(function)] = function
+    collector = _FUNCTION_COLLECTOR.get()
+    if collector is not None:
+        collector.append(function)
 
 
 def _registered_functions() -> tuple[GeneratedFunction, ...]:
     """Return the currently tracked generated functions in creation order."""
 
-    return tuple(_REGISTERED_FUNCTIONS)
+    return tuple(_REGISTERED_FUNCTIONS.values())
 
 
 def _clear_registered_functions() -> None:
     """Reset the in-process generated-function registry."""
 
     _REGISTERED_FUNCTIONS.clear()
+
+
+@contextmanager
+def _collect_functions():
+    """Keep script-created functions alive only for the duration of a CLI build."""
+
+    functions: list[GeneratedFunction] = []
+    token = _FUNCTION_COLLECTOR.set(functions)
+    try:
+        yield functions
+    finally:
+        _FUNCTION_COLLECTOR.reset(token)
 
 
 def _derive_function_name(prompt: str) -> str:
@@ -316,15 +395,12 @@ def _normalize_function_name(name: str) -> str:
         normalized = "generated_function"
     if normalized[0].isdigit():
         normalized = f"generated_{normalized}"
+    if keyword.iskeyword(normalized):
+        normalized = f"generated_{normalized}"
     return normalized
 
 
 def _signature_object_from_text(signature: str) -> inspect.Signature:
     """Convert a textual signature into an inspect-compatible Signature object."""
 
-    namespace: dict[str, Any] = {}
-    source = (
-        "from __future__ import annotations\n" f"def __temp{signature}:\n    pass\n"
-    )
-    exec(source, namespace, namespace)
-    return inspect.signature(namespace["__temp"])
+    return signature_object(signature)
