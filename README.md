@@ -13,6 +13,21 @@ Version **0.1.9** fixes annotated-tag releases, signature evaluation, cache corr
 provider response handling, and concurrent generation. See the
 [changelog](https://github.com/AaronCreor/PyFuncAI/blob/main/CHANGELOG.md).
 
+## Contents
+
+- [Installation](#installation)
+- [Quick start with Ollama](#quick-start-with-ollama)
+- [Remote providers](#remote-providers)
+- [API reference](#api-reference)
+- [Cache behavior and migration](#cache-behavior-and-migration)
+- [Command line](#command-line)
+- [Execution policy and safety](#execution-policy-and-safety)
+- [Troubleshooting](#troubleshooting)
+- [Development and testing](#development-and-testing)
+- [Contributing and releasing](#contributing-and-releasing)
+- [Contributors](#contributors)
+- [License](#license)
+
 ## Installation
 
 Requires Python **3.10 or newer**. CI tests Python 3.10 through 3.14 on Linux, plus Windows
