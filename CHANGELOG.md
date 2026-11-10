@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.11 - 2026-11-10
+
+### Documentation
+
+- Add a table of contents linking to the README's main sections, including the
+  documentation published on PyPI ([PR #12](https://github.com/AaronCreor/PyFuncAI/pull/12),
+  contributed by [29rdx](https://github.com/29rdx)).
+- Update release examples and contributor acknowledgments for the documentation release.
+
 ## 0.1.10 - 2026-11-01
 
 ### Added
