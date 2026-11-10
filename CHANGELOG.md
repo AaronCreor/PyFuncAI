@@ -1,15 +1,31 @@
 # Changelog
 
-## Unreleased
+## 0.1.11 - 2026-11-10
+
+### Documentation
+
+- Add a table of contents linking to the README's main sections, including the
+  documentation published on PyPI ([PR #12](https://github.com/AaronCreor/PyFuncAI/pull/12),
+  contributed by [29rdx](https://github.com/29rdx)).
+- Update release examples and contributor acknowledgments for the documentation release.
+
+## 0.1.10 - 2026-11-01
 
 ### Added
 
-- `pyfuncai --version` prints the installed package version (PR #7, submitted by
+- `pyfuncai --version` prints the installed package version ([PR #7](https://github.com/AaronCreor/PyFuncAI/pull/7), submitted by
   [ShahadatTest](https://github.com/ShahadatTest)).
 - `pyfuncai cache list --json` outputs an ordered array of cache keys, function
   names, modes, and creation timestamps. Empty caches produce `[]`; prompts,
-  generated source, and provider configuration are omitted (PR #6,
+  generated source, and provider configuration are omitted ([PR #6](https://github.com/AaronCreor/PyFuncAI/pull/6),
   [29rdx](https://github.com/29rdx)).
+
+### Documentation
+
+- Document both CLI additions in the README and PyPI description, and acknowledge
+  their contributors with links to the original pull requests.
+- Explain how contributors retain GitHub authorship credit when using coding
+  assistants and when changes are promoted through the repository branches.
 
 ## 0.1.9 - 2026-10-31
 
