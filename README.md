@@ -9,9 +9,9 @@ Define Python functions with prompts and generate their implementations using a 
 Ollama model, OpenAI, or Gemini. Generation can happen on first use or immediately.
 Validated source can be cached across runs. There are no runtime package dependencies.
 
-Version **0.1.10** adds `pyfuncai --version` and machine-readable cache metadata with
-`pyfuncai cache list --json`. Thanks to [29rdx](https://github.com/29rdx) and
-[ShahadatTest](https://github.com/ShahadatTest) for their contributions. See the
+Version **0.1.11** adds a table of contents for easier navigation through the README
+and PyPI documentation. Thanks to [29rdx](https://github.com/29rdx) for
+[the contribution](https://github.com/AaronCreor/PyFuncAI/pull/12). See the
 [changelog](https://github.com/AaronCreor/PyFuncAI/blob/main/CHANGELOG.md).
 
 ## Contents
@@ -318,7 +318,7 @@ runs the offline suite outside the checkout. On PowerShell, pass artifact paths
 explicitly:
 
 ```powershell
-python scripts/check_distribution.py dist/pyfuncai-0.1.10-py3-none-any.whl dist/pyfuncai-0.1.10.tar.gz
+python scripts/check_distribution.py dist/pyfuncai-0.1.11-py3-none-any.whl dist/pyfuncai-0.1.11.tar.gz
 ```
 
 Run optional live Ollama tests:
@@ -358,14 +358,14 @@ Stable release procedure:
 1. Update `pyproject.toml` version, README, and `CHANGELOG.md` together.
 2. Open a pull request into `main`; wait for all CI checks to pass and review the diff.
 3. Merge, fetch the resulting `main`, then create an annotated matching tag.
-4. Push the tag to run `release.yml`. For this release the tag is `v0.1.10`.
+4. Push the tag to run `release.yml`. For this release the tag is `v0.1.11`.
 5. Verify the GitHub release, PyPI version/description, and a clean PyPI installation.
 
 ```bash
 git switch main
 git pull --ff-only
-git tag -a v0.1.10 -m "Release PyFuncAI 0.1.10"
-git push origin v0.1.10
+git tag -a v0.1.11 -m "Release PyFuncAI 0.1.11"
+git push origin v0.1.11
 ```
 
 Do not reuse an existing release tag or package version. `release.yml` verifies the
@@ -375,7 +375,7 @@ through PyPI Trusted Publishing, then attached to a GitHub release only after Py
 publication succeeds. The GitHub `pypi` environment and PyPI trusted publisher must
 continue to authorize `AaronCreor/PyFuncAI`, workflow `release.yml`.
 
-`prerelease.yml` applies the same checks to `preview` tags such as `v0.1.11rc1`, then
+`prerelease.yml` applies the same checks to `preview` tags such as `v0.1.12rc1`, then
 creates a GitHub prerelease. Preview artifacts are not published to PyPI. CI and both
 release workflows share `.github/workflows/checks.yml`.
 
@@ -383,6 +383,7 @@ release workflows share `.github/workflows/checks.yml`.
 
 Thanks to [29rdx](https://github.com/29rdx) for
 [JSON cache listings](https://github.com/AaronCreor/PyFuncAI/pull/6) and
+[README navigation](https://github.com/AaronCreor/PyFuncAI/pull/12), and
 [ShahadatTest](https://github.com/ShahadatTest) for submitting
 [the version command](https://github.com/AaronCreor/PyFuncAI/pull/7).
 See the [full contributor history](https://github.com/AaronCreor/PyFuncAI/graphs/contributors).
