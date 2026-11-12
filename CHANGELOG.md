@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Reject directory targets in `pyfuncai build` before executing any code, including
+  directories containing `__main__.py`.
+
 ## 0.1.11 - 2026-11-10
 
 ### Documentation
