@@ -2,12 +2,10 @@
 
 ## Unreleased
 
-### Added
+### Fixed
 
-- `pyfuncai cache show FULL_CACHE_KEY` prints the cached Python source for one
-  entry to stdout, reusing `DiskCache.get()`. Missing, malformed, incompatible,
-  or invalid-key entries are reported on stderr with a nonzero exit status.
-  The `--cache-dir` option applies as with the other cache commands ([PR #26](https://github.com/AaronCreor/PyFuncAI/pull/26)).
+- Reject directory targets in `pyfuncai build` before executing any code, including
+  directories containing `__main__.py`.
 
 ## 0.1.11 - 2026-11-10
 

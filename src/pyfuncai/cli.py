@@ -120,6 +120,9 @@ def _handle_build(args: argparse.Namespace) -> int:
     if not script_path.exists():
         raise SystemExit(f"Target script does not exist: {script_path}")
 
+    if not script_path.is_file():
+        raise SystemExit(f"Target script is not a file: {script_path}")
+
     original_sys_path = list(sys.path)
     try:
         sys.path.insert(0, str(script_path.parent))

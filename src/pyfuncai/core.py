@@ -60,9 +60,11 @@ def connect(
     global _DEFAULT_CACHE
 
     cache_dir = config.pop("cache_dir", None)
-    _DEFAULT_PROVIDER = create_provider(provider, **config)
-    _DEFAULT_CACHE = DiskCache(cache_dir=cache_dir)
-    return _DEFAULT_PROVIDER
+    new_provider = create_provider(provider, **config)
+    new_cache = DiskCache(cache_dir=cache_dir)
+    _DEFAULT_PROVIDER = new_provider
+    _DEFAULT_CACHE = new_cache
+    return new_provider
 
 
 @dataclass
