@@ -156,6 +156,32 @@ Provider constructors accept the corresponding provider configuration except
 | `max_output_tokens` | `None` | Positive integer response token limit |
 | `allow_modules` | Default modules below | `None` uses defaults; `[]` disables all imports |
 
+Configure a provider with `connect()` first. Both modes use the same prompt and
+signature in this example.
+
+```python
+from pyfuncai import create_function
+
+options = dict(
+    prompt="Return twice the value of n.",
+    signature="(n: int) -> int",
+    function_name="double",
+    cache=False,
+)
+
+lazy = create_function(mode="lazy", **options)
+print(lazy.is_built)  # False: no generation yet
+print(lazy(3))        # 6: the first call builds the function
+print(lazy.is_built)  # True
+
+eager = create_function(mode="eager", **options)
+print(eager.is_built)  # True: creation already built the function
+print(eager(3))        # 6: uses the function that was built during creation
+```
+
+`cache=False` skips the disk source cache. Later calls to either instance still
+reuse its built callable in memory without another generation request.
+
 `createFunction(...)` remains a compatibility alias.
 
 Signatures support positional-only, keyword-only, variadic parameters, literal
