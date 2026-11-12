@@ -250,6 +250,10 @@ The JSON array contains exactly `cache_key`, `function_name`, `mode`, and
 An empty cache prints `[]`. Prompts, generated source, and provider configuration
 are omitted. Plain listings retain their existing output.
 
+`pyfuncai build` accepts a script file, not a directory. Directory targets are
+rejected before execution, even if they contain `__main__.py`. Quote paths
+containing spaces when invoking the command in a shell.
+
 `pyfuncai build` **executes the entire target script**, including its `__main__`
 block and other side effects, then builds the functions it created. Use a dedicated
 script containing definitions when prebuilding. A script can create eager functions
