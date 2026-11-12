@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preserve the previous default provider and cache when `connect()` setup fails.
+  A failed first connection leaves both defaults unconfigured.
+
 ## 0.1.11 - 2026-11-10
 
 ### Documentation
