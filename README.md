@@ -231,6 +231,7 @@ pyfuncai build --force path/to/script.py
 pyfuncai cache path
 pyfuncai cache list
 pyfuncai cache remove FULL_CACHE_KEY
+pyfuncai cache show FULL_CACHE_KEY
 pyfuncai cache clear
 pyfuncai cache --cache-dir .pyfuncai-cache list
 ```
@@ -249,6 +250,12 @@ The JSON array contains exactly `cache_key`, `function_name`, `mode`, and
 `created_at` for each entry, in the same newest-first order as the plain listing.
 An empty cache prints `[]`. Prompts, generated source, and provider configuration
 are omitted. Plain listings retain their existing output.
+
+`pyfuncai cache show FULL_CACHE_KEY` prints the cached Python source for one entry
+to stdout. The source is read from disk without executing it or contacting a
+provider. Missing, malformed, incompatible, or invalid-key entries are reported on
+stderr with a nonzero exit status and no source output. The `--cache-dir` option
+applies as with the other cache commands.
 
 `pyfuncai build` **executes the entire target script**, including its `__main__`
 block and other side effects, then builds the functions it created. Use a dedicated
@@ -295,6 +302,7 @@ For vulnerability reporting, see the
 | Incomplete output | Increase `max_output_tokens` or use the model default |
 | Signature/validation error | Use literal defaults, supported modules/builtins, and a precise prompt; inspect available source and retry with `build(force=True)` |
 | Cache behavior seems stale | Force regeneration or remove the matching cache key |
+| Target is a directory | `pyfuncai build` requires a script file, not a directory; pass a `.py` file path |
 | Invalid distribution metadata locally | Upgrade development tooling in your virtual environment, including Twine and packaging |
 
 ## Development and testing
