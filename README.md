@@ -235,6 +235,7 @@ pyfuncai build --force path/to/script.py
 pyfuncai cache path
 pyfuncai cache list
 pyfuncai cache remove FULL_CACHE_KEY
+pyfuncai cache show FULL_CACHE_KEY
 pyfuncai cache clear
 pyfuncai cache --cache-dir .pyfuncai-cache list
 ```

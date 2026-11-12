@@ -94,6 +94,16 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     cache_remove_parser.set_defaults(handler=_handle_cache_remove)
 
+    cache_show_parser = cache_subparsers.add_parser(
+        "show",
+        help="Print the cached Python source for one cache entry.",
+    )
+    cache_show_parser.add_argument(
+        "cache_key",
+        help="Full cache key whose source to print.",
+    )
+    cache_show_parser.set_defaults(handler=_handle_cache_show)
+
     cache_clear_parser = cache_subparsers.add_parser(
         "clear",
         help="Delete every cache entry in the active cache directory.",
@@ -187,6 +197,21 @@ def _handle_cache_remove(args: argparse.Namespace) -> int:
 
     print(f"Cache entry {args.cache_key} was not found.")
     return 1
+
+
+def _handle_cache_show(args: argparse.Namespace) -> int:
+    """Print the cached Python source for one cache entry."""
+
+    cache = DiskCache(cache_dir=args.cache_dir)
+    entry = cache.get(args.cache_key)
+    if entry is None:
+        print(
+            f"pyfuncai: no cached source for key {args.cache_key}",
+            file=sys.stderr,
+        )
+        return 1
+    print(entry.source)
+    return 0
 
 
 def _handle_cache_clear(args: argparse.Namespace) -> int:
