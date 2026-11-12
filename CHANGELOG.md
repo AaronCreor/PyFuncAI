@@ -9,6 +9,12 @@
   or invalid-key entries are reported on stderr with a nonzero exit status.
   The `--cache-dir` option applies as with the other cache commands ([PR #26](https://github.com/AaronCreor/PyFuncAI/pull/26)).
 
+### Fixed
+
+- `pyfuncai build` rejects directory targets with a concise stderr error and a
+  nonzero exit status, before executing any target code. Directories containing
+  `__main__.py` are rejected as well ([PR #24](https://github.com/AaronCreor/PyFuncAI/pull/24)).
+
 ## 0.1.11 - 2026-11-10
 
 ### Documentation

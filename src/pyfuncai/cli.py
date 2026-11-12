@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections.abc import Sequence
-from pathlib import Path
 import runpy
 import sys
+from collections.abc import Sequence
+from pathlib import Path
 
 from pyfuncai import __version__
 from pyfuncai.cache import DiskCache
@@ -119,6 +119,8 @@ def _handle_build(args: argparse.Namespace) -> int:
     script_path = Path(args.target).resolve()
     if not script_path.exists():
         raise SystemExit(f"Target script does not exist: {script_path}")
+    if script_path.is_dir():
+        raise SystemExit(f"Target is a directory, not a script: {script_path}")
 
     original_sys_path = list(sys.path)
     try:

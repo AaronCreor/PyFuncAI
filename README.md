@@ -302,6 +302,7 @@ For vulnerability reporting, see the
 | Incomplete output | Increase `max_output_tokens` or use the model default |
 | Signature/validation error | Use literal defaults, supported modules/builtins, and a precise prompt; inspect available source and retry with `build(force=True)` |
 | Cache behavior seems stale | Force regeneration or remove the matching cache key |
+| Target is a directory | `pyfuncai build` requires a script file, not a directory; pass a `.py` file path |
 | Invalid distribution metadata locally | Upgrade development tooling in your virtual environment, including Twine and packaging |
 
 ## Development and testing
