@@ -4,8 +4,8 @@
 
 ### Fixed
 
-- Preserve the previous default provider and cache when `connect()` setup fails.
-  A failed first connection leaves both defaults unconfigured.
+- Reject directory targets in `pyfuncai build` before executing any code, including
+  directories containing `__main__.py`.
 
 ## 0.1.11 - 2026-11-10
 
