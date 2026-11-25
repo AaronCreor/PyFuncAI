@@ -27,6 +27,7 @@ from pyfuncai.validation import DEFAULT_ALLOWED_MODULES, validate_function_sourc
 
 _DEFAULT_PROVIDER: BaseProvider | None = None
 _DEFAULT_CACHE: DiskCache | None = None
+_DEFAULTS_LOCK = threading.Lock()
 _REGISTERED_FUNCTIONS: WeakValueDictionary[int, GeneratedFunction] = (
     WeakValueDictionary()
 )
@@ -60,9 +61,12 @@ def connect(
     global _DEFAULT_CACHE
 
     cache_dir = config.pop("cache_dir", None)
-    _DEFAULT_PROVIDER = create_provider(provider, **config)
-    _DEFAULT_CACHE = DiskCache(cache_dir=cache_dir)
-    return _DEFAULT_PROVIDER
+    next_provider = create_provider(provider, **config)
+    next_cache = DiskCache(cache_dir=cache_dir)
+    with _DEFAULTS_LOCK:
+        _DEFAULT_PROVIDER = next_provider
+        _DEFAULT_CACHE = next_cache
+    return next_provider
 
 
 @dataclass
@@ -294,18 +298,17 @@ def create_function(
         materialized ahead of time via `.build()`.
     """
 
-    provider_instance = provider or _DEFAULT_PROVIDER
-    if provider_instance is None:
-        raise ConfigurationError(
-            "No provider configured. Call connect(...) first or pass provider=."
-        )
-
-    if not isinstance(prompt, str) or not prompt.strip():
-        raise ConfigurationError("prompt must be a nonempty string.")
-
-    cache_store = (
-        DiskCache(cache_dir) if cache_dir is not None else _resolve_cache_store()
-    )
+    with _DEFAULTS_LOCK:
+        provider_instance = provider or _DEFAULT_PROVIDER
+        if provider_instance is None:
+            raise ConfigurationError(
+                "No provider configured. Call connect(...) first or pass provider=."
+            )
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ConfigurationError("prompt must be a nonempty string.")
+        cache_store = _resolve_cache_store() if cache_dir is None else None
+    if cache_store is None:
+        cache_store = DiskCache(cache_dir)
     generated = GeneratedFunction(
         prompt=prompt,
         signature=signature,
@@ -334,7 +337,7 @@ def createFunction(*args: Any, **kwargs: Any) -> GeneratedFunction:
 
 
 def _resolve_cache_store() -> DiskCache:
-    """Return the active cache store, creating a default one if necessary."""
+    """Return the active cache store while the caller holds the defaults lock."""
 
     global _DEFAULT_CACHE
 
