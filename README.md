@@ -102,6 +102,8 @@ Configures the process-wide default provider and cache for future functions. Exi
 functions retain their provider and cache. Supported provider names are `ollama`,
 `openai`, and `gemini`.
 
+If provider or cache setup fails, `connect()` raises and preserves the previous defaults.
+
 | Configuration | Default | Meaning |
 | --- | --- | --- |
 | `model` | Required | Provider model identifier |

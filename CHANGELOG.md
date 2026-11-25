@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preserve the previous provider and cache if a call to `connect()` fails.
+
 ## 0.1.11 - 2026-11-10
 
 ### Documentation

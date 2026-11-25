@@ -17,6 +17,7 @@ from pyfuncai import (
 from pyfuncai.cache import DiskCache
 from pyfuncai import __version__
 from pyfuncai.cli import main as cli_main
+from pyfuncai import core
 from pyfuncai.core import GeneratedFunction
 from pyfuncai.providers import BaseProvider
 
@@ -53,6 +54,51 @@ class FakeProvider(BaseProvider):
             "provider": self.provider_name,
             "model": self.model,
         }
+
+
+@pytest.fixture
+def unconfigured_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(core, "_DEFAULT_PROVIDER", None)
+    monkeypatch.setattr(core, "_DEFAULT_CACHE", None)
+
+
+def test_failed_reconnect_preserves_defaults_and_success_replaces_them(
+    tmp_path: Path, unconfigured_defaults: None
+) -> None:
+    first_path = tmp_path / "first"
+    first_provider = connect("ollama", model="first", cache_dir=str(first_path))
+    existing = create_function("Return one.", signature="() -> int")
+    blocked_path = tmp_path / "blocked"
+    blocked_path.touch()
+
+    with pytest.raises(OSError):
+        connect("ollama", model="failed", cache_dir=str(blocked_path))
+
+    after_failure = create_function("Return one.", signature="() -> int")
+    assert after_failure.provider is first_provider
+    assert after_failure.cache_store is existing.cache_store
+    assert after_failure.cache_store.cache_dir == first_path
+
+    next_path = tmp_path / "next"
+    next_provider = connect("ollama", model="next", cache_dir=str(next_path))
+    after_success = create_function("Return one.", signature="() -> int")
+    assert after_success.provider is next_provider
+    assert after_success.cache_store.cache_dir == next_path
+    assert existing.provider is first_provider
+    assert existing.cache_store.cache_dir == first_path
+
+
+def test_failed_first_connect_leaves_provider_unconfigured(
+    tmp_path: Path, unconfigured_defaults: None
+) -> None:
+    blocked_path = tmp_path / "blocked"
+    blocked_path.touch()
+
+    with pytest.raises(OSError):
+        connect("ollama", model="failed", cache_dir=str(blocked_path))
+
+    with pytest.raises(ConfigurationError, match="No provider configured"):
+        create_function("Return one.", signature="() -> int")
 
 
 def test_lazy_function_builds_once_and_uses_cache(tmp_path: Any) -> None:
